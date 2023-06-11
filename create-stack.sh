@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set the stack name
-stack_name="Truong-Udagram"
+stack_name="truong-udagram"
 
 # Create the network stack
 network_stack_name="$stack_name-network"
