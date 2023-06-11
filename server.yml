@@ -1,0 +1,78 @@
+Description: Truong - Udacity Deploy a high-availability web app using CloudFormation (Server)
+
+Parameters:
+  EnvironmentName:
+    Type: String
+  InstanceType:
+    Type: String
+  DiskSize:
+    Type: Number
+  InstanceImageId:
+    Type: AWS::EC2::Image::Id
+
+Resources:
+  LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: !Ref InstanceImageId
+      InstanceType: !Ref InstanceType
+      BlockDeviceMappings:
+        - DeviceName: "/dev/sda1"
+          Ebs:
+            VolumeSize: !Ref DiskSize
+            VolumeType: gp2
+      SecurityGroups:
+        - !Ref SecurityGroup
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      MinSize: 2
+      MaxSize: 4
+      DesiredCapacity: 2
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      TargetGroupARNs:
+        - !Ref TargetGroup
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP access
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: target-group
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref VPC
+      TargetType: instance
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: HTTP
+      HealthCheckPort: 80
+      HealthCheckPath: "/"
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+
+Outputs:
+  LoadBalancerURL:
+    Description: URL of the Load Balancer
+    Value: !Sub "http://${LoadBalancer.DNSName}"
+    Export:
+      Name: !Sub "${EnvironmentName}-LoadBalancerURL"
+
+  TargetGroupARN:
+    Description: ARN of the Target Group
+    Value: !Ref TargetGroup
+    Export:
+      Name: !Sub "${EnvironmentName}-TargetGroupARN"
